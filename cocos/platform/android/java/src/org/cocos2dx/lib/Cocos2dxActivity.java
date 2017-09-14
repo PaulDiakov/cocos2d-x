@@ -37,6 +37,8 @@ import android.os.Message;
 import android.preference.PreferenceManager.OnActivityResultListener;
 import android.util.Log;
 import android.view.View;
+import android.view.Choreographer;
+import android.view.Choreographer.FrameCallback;
 import android.view.ViewGroup;
 import android.view.Window;
 import android.view.WindowManager;
@@ -48,7 +50,8 @@ import javax.microedition.khronos.egl.EGLConfig;
 import javax.microedition.khronos.egl.EGLDisplay;
 import javax.microedition.khronos.egl.EGLContext;
 
-public abstract class Cocos2dxActivity extends Activity implements Cocos2dxHelperListener {
+public abstract class Cocos2dxActivity extends Activity
+        implements Cocos2dxHelperListener, Choreographer.FrameCallback {
     // ===========================================================
     // Constants
     // ===========================================================
@@ -68,6 +71,8 @@ public abstract class Cocos2dxActivity extends Activity implements Cocos2dxHelpe
     private Cocos2dxEditBoxHelper mEditBoxHelper = null;
     private boolean hasFocus = false;
     private boolean showVirtualButton = false;
+    private boolean mWaitingForFrame = false;
+    private long lastFrameTime = 0;
 
     public Cocos2dxGLSurfaceView getGLSurfaceView(){
         return  mGLSurfaceView;
@@ -189,6 +194,9 @@ public abstract class Cocos2dxActivity extends Activity implements Cocos2dxHelpe
             this.hideVirtualButton();
         	Cocos2dxHelper.onResume();
         	mGLSurfaceView.onResume();
+
+            this.lastFrameTime = 0;
+            requestFrame();
         }
     }
 
@@ -196,6 +204,7 @@ public abstract class Cocos2dxActivity extends Activity implements Cocos2dxHelpe
     protected void onPause() {
     	Log.d(TAG, "onPause()");
         super.onPause();
+        cancelFrameRequest();
         Cocos2dxAudioFocusManager.unregisterAudioFocusListener(this);
         Cocos2dxHelper.onPause();
         mGLSurfaceView.onPause();
@@ -271,12 +280,33 @@ public abstract class Cocos2dxActivity extends Activity implements Cocos2dxHelpe
 
         this.mGLSurfaceView.setCocos2dxRenderer(new Cocos2dxRenderer());
         this.mGLSurfaceView.setCocos2dxEditText(edittext);
+        this.mGLSurfaceView.setRenderMode(GLSurfaceView.RENDERMODE_WHEN_DIRTY);
 
         // Set framelayout as the content view
         setContentView(mFrameLayout);
     }
 
-    
+    @Override
+    public void doFrame(long frameTime) {
+        mWaitingForFrame = false;
+        requestFrame();
+
+        mGLSurfaceView.onDoFrame(lastFrameTime > 0 ? frameTime - lastFrameTime : 0);
+        lastFrameTime = frameTime;
+    }
+
+    public void cancelFrameRequest() {
+        mWaitingForFrame = false;
+        Choreographer.getInstance().removeFrameCallback(this);
+    }
+
+    public void requestFrame() {
+        if (!mWaitingForFrame) {
+            mWaitingForFrame = true;
+            Choreographer.getInstance().postFrameCallback(this);
+        }
+    }
+
     public Cocos2dxGLSurfaceView onCreateView() {
         Cocos2dxGLSurfaceView glSurfaceView = new Cocos2dxGLSurfaceView(this);
         //this line is need on some device if we specify an alpha bits

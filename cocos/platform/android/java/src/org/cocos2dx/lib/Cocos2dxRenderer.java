@@ -24,9 +24,9 @@ THE SOFTWARE.
 package org.cocos2dx.lib;
 
 import android.opengl.GLSurfaceView;
-
 import javax.microedition.khronos.egl.EGLConfig;
 import javax.microedition.khronos.opengles.GL10;
+
 public class Cocos2dxRenderer implements GLSurfaceView.Renderer {
     // ===========================================================
     // Constants
@@ -47,6 +47,9 @@ public class Cocos2dxRenderer implements GLSurfaceView.Renderer {
     private int mScreenHeight;
     private boolean mNativeInitCompleted = false;
 
+    private long deltaTime = 0;
+    private static final Object lockDeltaTime = new Object();
+
     // ===========================================================
     // Constructors
     // ===========================================================
@@ -54,6 +57,12 @@ public class Cocos2dxRenderer implements GLSurfaceView.Renderer {
     // ===========================================================
     // Getter & Setter
     // ===========================================================
+
+    public void incrementDeltaTime(final long deltaTimeNanos) {
+        synchronized (lockDeltaTime ) {
+            deltaTime += deltaTimeNanos;
+        }
+    }
 
     public static void setAnimationInterval(float interval) {
         sAnimationInterval = (long) (interval * Cocos2dxRenderer.NANOSECONDSPERSECOND);
@@ -82,10 +91,20 @@ public class Cocos2dxRenderer implements GLSurfaceView.Renderer {
 
     @Override
     public void onDrawFrame(final GL10 gl) {
+        float dt;
+
+        synchronized (lockDeltaTime ) {
+            dt = (float) deltaTime / NANOSECONDSPERSECOND;
+            deltaTime = 0;
+        }
+
+        Cocos2dxRenderer.nativeRender(dt);
+
         /*
          * No need to use algorithm in default(60 FPS) situation,
          * since onDrawFrame() was called by system 60 times per second by default.
          */
+        /*
         if (Cocos2dxRenderer.sAnimationInterval <= 1.0 / 60 * Cocos2dxRenderer.NANOSECONDSPERSECOND) {
             Cocos2dxRenderer.nativeRender();
         } else {
@@ -98,12 +117,11 @@ public class Cocos2dxRenderer implements GLSurfaceView.Renderer {
                 } catch (final Exception e) {
                 }
             }
-            /*
-             * Render time MUST be counted in, or the FPS will slower than appointed.
-            */
+            //Render time MUST be counted in, or the FPS will slower than appointed.
             this.mLastTickInNanoSeconds = System.nanoTime();
             Cocos2dxRenderer.nativeRender();
         }
+        */
     }
 
     // ===========================================================
@@ -115,7 +133,7 @@ public class Cocos2dxRenderer implements GLSurfaceView.Renderer {
     private static native void nativeTouchesMove(final int[] ids, final float[] xs, final float[] ys);
     private static native void nativeTouchesCancel(final int[] ids, final float[] xs, final float[] ys);
     private static native boolean nativeKeyEvent(final int keyCode,boolean isPressed);
-    private static native void nativeRender();
+    private static native void nativeRender(final float dt);
     private static native void nativeInit(final int width, final int height);
     private static native void nativeOnSurfaceChanged(final int width, final int height);
     private static native void nativeOnPause();

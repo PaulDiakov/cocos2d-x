@@ -173,6 +173,11 @@ public class Cocos2dxGLSurfaceView extends GLSurfaceView {
         }
     }
 
+    public void onDoFrame(final long deltaTimeNanos) {
+        mCocos2dxRenderer.incrementDeltaTime(deltaTimeNanos);
+        requestRender();
+    }
+
     // ===========================================================
     // Methods for/from SuperClass/Interfaces
     // ===========================================================
@@ -180,7 +185,7 @@ public class Cocos2dxGLSurfaceView extends GLSurfaceView {
     @Override
     public void onResume() {
         super.onResume();
-        this.setRenderMode(RENDERMODE_CONTINUOUSLY);
+        //this.setRenderMode(RENDERMODE_CONTINUOUSLY);
         this.queueEvent(new Runnable() {
             @Override
             public void run() {
@@ -197,7 +202,7 @@ public class Cocos2dxGLSurfaceView extends GLSurfaceView {
                 Cocos2dxGLSurfaceView.this.mCocos2dxRenderer.handleOnPause();
             }
         });
-        this.setRenderMode(RENDERMODE_WHEN_DIRTY);
+        //this.setRenderMode(RENDERMODE_WHEN_DIRTY);
         //super.onPause();
     }
 
